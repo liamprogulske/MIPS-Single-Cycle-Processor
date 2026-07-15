@@ -1,38 +1,53 @@
 # MIPS Single-Cycle Processor — RTL Design & Verification
 
-A fully functional, single-cycle MIPS microprocessor designed at the Register-Transfer Level (RTL) and verified using Xilinx Vivado. Developed as a final design capstone project at Florida Tech, this project implements hardware modules to execute fundamental MIPS instruction-set architecture (ISA) commands in a single clock cycle.
+A fully functional, single-cycle MIPS microprocessor designed at the Register-Transfer Level (RTL) using structural VHDL and verified via the Xilinx Vivado Design Suite. Developed as a hardware architecture capstone at Florida Tech, this processor implements a fully decoupled datapath and control unit to execute a targeted 10-instruction subset of the MIPS ISA completely within a single clock cycle.
 
 ---
 
-## 🏛️ System Architecture & Datapath
+## 🏛️ System Architecture & Hardware Components
 
-The processor features a decoupled datapath and control unit architecture, executing instructions by fetching from instruction memory, decoding via the control unit, reading from a custom register file, executing operations via the ALU, and interfacing with data memory.
+The design follows a strict non-pipelined microarchitecture where instruction fetching, decoding, register file access, ALU execution, and data memory operations resolve synchronously before the next rising clock edge.
 
-### 🧩 Core Hardware Modules
-* **Control Unit:** Decodes execution opcodes and function fields to dynamically assert routing mux control flags and ALU operations.
-* **Arithmetic Logic Unit (ALU):** Handles core mathematical, logic, and branching evaluation constraints (e.g., `ADD`, `SUB`, `AND`, `OR`, `SLT`, `BEQ`).
-* **Register File:** A synchronous 32 × 32-bit dual-read, single-write register block managing local runtime operands.
-* **Program Counter (PC) & Memory Blocks:** Byte-addressable modules managing instruction sequencing and volatile data block persistence.
+### 📋 Supported Instruction Set Architecture (ISA)
+The hardware natively decodes and executes a subset of 10 core MIPS instructions, tracking data routing across three distinct instruction formats:
+* **Arithmetic / Logical (R-Type):** `add`, `sub`, `and`, `or`, `slt`
+* **Immediate (I-Type):** `addi` (Arithmetic), `lw`, `sw` (Memory Reference)
+* **Control Transfer:** `beq` (Conditional Branching), `j` (Unconditional Jump)
+
+### 🧩 Structural Component Breakdown
+The entire system architecture is built modularly by instantiating and structurally wiring **11 custom VHDL sub-components** inside the top-level entity (`mips_single_cycle_struct.vhd`):
+
+* **`pc_register.vhd`**: A 32-bit synchronous register managing program counter address transitions.
+* **`im_4byte_wide.vhd`**: A byte-addressable instruction memory module initialized at code segments base address `0x00400000`.
+* **`regfile.vhd`**: A dual-read, single-write synchronous 32x32-bit register file handling operands execution dynamically.
+* **`mips_cu_behave.vhd`**: The main behavioral control unit mapping opcodes (`Instr[31:26]`) directly to system routing lines (`RegDst`, `ALUSrc`, `MemtoReg`, `RegWrite`, `MemRead`, `MemWrite`, `Branch`, `Jump`).
+* **`alu_controller.vhd`**: Combines a 2-bit ALUOp signal from the main control unit with instruction function codes (`funct` fields `Instr[5:0]`) to route 4-bit ALU control vectors.
+* **`alu.vhd`**: The core execution engine performing operational tasks and generating a `Zero` flag used to resolve branching assertions.
+* **`dm_4byte_wide.vhd`**: High-performance data memory subsystem maintaining data segment properties mapped starting at address `0x10010000`.
+* **`sign_extend.vhd`**: Performs 16-bit to 32-bit sign extension for immediate parameters.
+* **Adders & Shifters**: Houses standalone structural execution modules (`adder_first.vhd`, `adder_second.vhd`, `first_shift_left_2.vhd`, `second_shift_left_2.vhd`) to compute target addresses for sequential jumps and PC branching parameters in parallel.
 
 ---
 
 ## 🚀 Key Engineering & Digital Design Solutions
-* **RTL Synthesis Optimization:** Designed fully synthesizable, structural HDL code avoiding race conditions, latches, or unclocked feedback loops.
-* **Modular Interface Design:** Implemented top-level component instantiations keeping functional blocks easily testable and decoupled.
-* **Behavioral Verification:** Validated correctness through explicit testbenches simulating clock-cycles, tracking signal waveforms, and inspecting register state changes.
+
+* **Structural VHDL Modeling**: Avoided flat monolithic behavioral tracking by designing modular, compilable individual hardware components tied together dynamically via port-mapping schemas.
+* **MIPS Memory Map Alignment**: Synced internal VHDL addressing limits perfectly to replicate a genuine production memory alignment layout ($PC_0 = \text{0x00400000}$ for code segments and $\text{0x10010000}$ for static data limits).
+* **Glitch-Free Verification Matrix**: Proved hardware optimization correctness by running custom assembly routines natively within the MARS IDE, extracting expected system memory hexadecimal output dumps, and verifying that the synthesizable RTL waves inside Vivado match bit-for-bit.
 
 ---
 
 ## 🛠️ Tech Stack & Tools
-* **Hardware Description Language:** Verilog / VHDL
+* **Hardware Description Language:** VHDL
 * **EDA Synthesis & Simulation Tool:** Xilinx Vivado Design Suite
-* **Target Architecture:** MIPS32 ISA Subset
+* **Target Architecture:** MIPS32 ISA (10-Instruction Core Subset)
+* **Cross-Verification Tools:** MARS (MIPS Assembler and Runtime Simulator)
 
 ---
 
 ## 📂 Repository Layout
-* **`/src`**: Core hardware description language source files containing the structural module layouts.
-* **`/sim`**: Simulation files and behavioral testbenches used to verify circuit timing and signal validity.
+* **`/src`**: Core VHDL hardware design files containing the individual component layout files and structurally mapped modules.
+* **`/sim`**: Simulation files and testbenches (`mips_single_cycle_tb.vhd`) utilized to assert timing validity over clock cycles.
 
 ---
 
