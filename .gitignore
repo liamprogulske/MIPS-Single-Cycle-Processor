@@ -1,0 +1,12 @@
+# Ignore Vivado-generated directories
+**/Final Project.cache/
+**/Final Project.hw/
+**/Final Project.ip_user_files/
+**/Final Project.sim/
+.Xil/
+
+# Ignore temporary logging/run files
+*.log
+*.jou
+*.str
+*.pb
